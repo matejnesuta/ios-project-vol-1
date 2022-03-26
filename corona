@@ -3,6 +3,9 @@
 POSIXLY_CORRECT=yes
 
 gender=""
+operators=""
+command=""
+numberOfCommands=0
 
 print_help() {
     echo -e "\e[1mNAME\e[0m"
@@ -86,32 +89,61 @@ valid_gender(){
         then
                 gender=$1
         else
-                error "Spatne zadane pohlavi." 22
+                error "Špatně zadané pohlaví." 22
         fi
         
 }
 
 while [ "$#" -gt 0 ]; do
+        if [[ "$operators" == *"$1"* ]]; then
+                error "Nalezen duplicitní operátor." 22
+        fi
+        
         case "$1" in
+                -h|-a|-b|-g|-s)
+                        if [ "$numberOfCommands" -gt 0   ]
+                        then 
+                                error "Operátor nemůže být zadán po příkazu a nebo souborech." 22
+                        fi
+                        ;&
                 -h)
                         print_help
                         exit 0;
                         ;;
                 -a)
-                        echo "a"
+                        operators="$operators $1"
+                        shift
                         ;;
                 -b)
-                        echo "b"
+                        operators="$operators $1"
+                        shift
                         ;;
                 -g)
+                        operators="$operators $1"
                         valid_gender "$2"
+                        shift
+                        shift
                         ;;
                 -s)
-                        echo "s"
+                        operators="$operators $1"
+                        shift
+                        ;;
+
+                infected|merge|gender|age|daily|monthly|yearly|countries|districts|regions) 
+                        ((numberOfCommands++))
+                        if [ "$numberOfCommands" -gt 1 ]
+                        then
+                                error "Může být zadán pouze 1 příkaz." 22
+                        fi
+                        command=$1
+                        shift
+                        ;;
+                
+                *)
+                        error "Neznámý argument." 22
                         ;;
         esac
 
-        shift
 done
 
-echo "$gender"
+echo $operators $command
