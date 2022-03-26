@@ -1,0 +1,74 @@
+#!/bin/bash
+
+print_help() {
+    echo -e "\e[1mNAME\e[0m"
+    echo "      corona — analyzátor záznamů osob s prokázanou nákazou koronavirem způsobujícím onemocnění COVID-19"
+    echo ""
+
+    echo -e "\e[1mUSAGE\e[0m"
+    echo "      corona [-h|--help]"
+    echo "      corona [FILTERS] [COMMAND] [LOG [LOG2 [...]]"
+    echo ""
+
+    echo -e "\e[1mOPTIONS\e[0m"
+    echo -e "      \e[1mCOMMAND může být jeden z:\e[0m"
+    echo ""
+
+    echo -e "      \e[1minfected\e[0m"
+    echo "          — spočítá počet nakažených."
+    echo -e "      \e[1mmerge\e[0m"
+    echo "          — sloučí několik souborů se záznamy do jednoho, zachovávající původní pořadí 
+            (hlavička bude ve výstupu jen jednou)."
+    echo -e "      \e[1mgender\e[0m"
+    echo "          — vypíše počet nakažených pro jednotlivá pohlaví."
+    echo -e "      \e[1mage\e[0m"
+    echo "          — vypíše statistiku počtu nakažených osob dle věku (bližší popis je níže)."
+    echo -e "      \e[1mdaily\e[0m"
+    echo "          — vypíše statistiku nakažených osob pro jednotlivé dny."
+    echo -e "      \e[1mmonthly\e[0m"
+    echo "          — vypíše statistiku nakažených osob pro jednotlivé měsíce."
+    echo -e "      \e[1myearly\e[0m"
+    echo "          — vypíše statistiku nakažených osob pro jednotlivé roky."
+    echo -e "      \e[1mcountries\e[0m"
+    echo "          — vypíše statistiku nakažených osob pro jednotlivé země nákazy (bez ČR, tj. kódu CZ)."
+    echo -e "      \e[1mdistricts\e[0m"
+    echo "          — vypíše statistiku nakažených osob pro jednotlivé okresy."
+    echo -e "      \e[1mregions\e[0m"
+    echo "          — vypíše statistiku nakažených osob pro jednotlivé kraje."
+    echo ""
+
+    echo -e "      \e[1mFILTERS může být kombinace následujících (každý maximálně jednou):\e[0m"
+    echo ""
+
+    echo -e "      \e[1m-a DATETIME\e[0m"
+    echo "          — after: jsou uvažovány pouze záznamy PO tomto datu (včetně tohoto data). 
+            DATETIME je formátu YYYY-MM-DD."
+    echo ""
+    echo -e "      \e[1m-b DATETIME\e[0m"
+    echo "          — before: jsou uvažovány pouze záznamy PŘED tímto datem (včetně tohoto data)."
+    echo ""
+    echo -e "      \e[1m-g GENDER\e[0m"
+    echo "          — jsou uvažovány pouze záznamy nakažených osob daného pohlaví. 
+            GENDER může být M (muži) nebo Z (ženy)."
+    echo ""
+    echo -e "      \e[1m-s [WIDTH]\e[0m" 
+    echo "          — u příkazů gender, age, daily, monthly, yearly, countries, districts a regions 
+            vypisuje data ne číselně, ale graficky v podobě histogramů. 
+            Nepovinný parametr WIDTH nastavuje šířku histogramů, tedy délku nejdelšího řádku, na WIDTH. 
+            Tedy, WIDTH musí být kladné celé číslo. 
+            Pokud není parametr WIDTH uveden, řídí se šířky řádků požadavky uvedenými níže.
+            
+            - gender — 100 000
+            - age — 10 000
+            - daily — 500
+            - monthly — 10 000
+            - yearly — 100 000
+            - countries — 100
+            - districts — 1 000
+            - regions — 10 000"
+
+    echo ""
+    echo -e "      \e[1m-h\e[0m"
+    echo "          — vypíše nápovědu s krátkým popisem každého příkazu a přepínače"
+}
+``
