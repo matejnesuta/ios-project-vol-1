@@ -1,1 +1,1 @@
-# ios-project-vol-1
+# IOS - 1. projekt: bash script
