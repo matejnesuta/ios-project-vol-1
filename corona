@@ -1,5 +1,9 @@
 #!/bin/bash
 
+POSIXLY_CORRECT=yes
+
+gender=""
+
 print_help() {
     echo -e "\e[1mNAME\e[0m"
     echo "      corona — analyzátor záznamů osob s prokázanou nákazou koronavirem způsobujícím onemocnění COVID-19"
@@ -71,4 +75,43 @@ print_help() {
     echo -e "      \e[1m-h\e[0m"
     echo "          — vypíše nápovědu s krátkým popisem každého příkazu a přepínače"
 }
-``
+
+error(){
+   echo "$1" >/dev/stderr
+   exit "$2"     
+}
+
+valid_gender(){
+        if [ "$1" = "M" ] || [ "$1" = "Z" ]
+        then
+                gender=$1
+        else
+                error "Spatne zadane pohlavi." 22
+        fi
+        
+}
+
+while [ "$#" -gt 0 ]; do
+        case "$1" in
+                -h)
+                        print_help
+                        exit 0;
+                        ;;
+                -a)
+                        echo "a"
+                        ;;
+                -b)
+                        echo "b"
+                        ;;
+                -g)
+                        valid_gender "$2"
+                        ;;
+                -s)
+                        echo "s"
+                        ;;
+        esac
+
+        shift
+done
+
+echo "$gender"
