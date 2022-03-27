@@ -6,6 +6,7 @@ gender=""
 operators=""
 command=""
 numberOfCommands=0
+files=""
 
 print_help() {
     echo -e "\e[1mNAME\e[0m"
@@ -101,11 +102,11 @@ while [ "$#" -gt 0 ]; do
         
         case "$1" in
                 -h|-a|-b|-g|-s)
-                        if [ "$numberOfCommands" -gt 0   ]
+                        if [ "$numberOfCommands" -gt 0  ] || [ "$files" != "" ]
                         then 
                                 error "Operátor nemůže být zadán po příkazu a nebo souborech." 22
                         fi
-                        ;&
+                        ;;&
                 -h)
                         print_help
                         exit 0;
@@ -134,16 +135,20 @@ while [ "$#" -gt 0 ]; do
                         if [ "$numberOfCommands" -gt 1 ]
                         then
                                 error "Může být zadán pouze 1 příkaz." 22
+                        elif [ "$files" != "" ]
+                        then
+                                error "Příkaz nemůže být zadán po souboru." 22
                         fi
                         command=$1
                         shift
                         ;;
                 
                 *)
-                        error "Neznámý argument." 22
+                        files="$files $1"
+                        shift
                         ;;
         esac
 
 done
 
-echo $operators $command
+echo $operators $command $files
