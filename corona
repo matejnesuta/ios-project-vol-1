@@ -9,6 +9,7 @@ numberOfCommands=0
 files=""
 dateAfter=""
 dateBefore=""
+width=1
 
 print_help() {
     echo -e "\e[1mNAME\e[0m"
@@ -96,12 +97,26 @@ valid_gender(){
         fi
 }
 
+
+# ^(((0[1-9]|[12]\d|3[01])\/(0[13578]|1[02])\/((19|[2-9]\d)\d{2}))|((0[1-9]|[12]\d|30)\/(0[13456789]|1[012])\/((19|[2-9]\d)\d{2}))|((0[1-9]|1\d|2[0-8])\/02\/((19|[2-9]\d)\d{2}))|(29\/02\/((1[6-9]|[2-9]\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))))|^(0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d+$
+# Matches: this expression validates a date field in dd/mm/yyyy  and mm/dd/yyyy format
+
+
 date_validator(){
         if [ -z "$(date -d "$1" 2>/dev/null)" ] ; then
                 error "Zadáno nevalidní datum." 22
         else
                 return 0
         fi
+}
+
+integer_validator(){
+        local re='^[0-9]*[1-9]+$|^[1-9]+[0-9]*$'
+        if ! [[ $1 =~ $re ]] ; 
+        then
+                return 1        
+        fi
+        return 0
 }
 
 while [ "$#" -gt 0 ]; do
@@ -142,6 +157,13 @@ while [ "$#" -gt 0 ]; do
                         ;;
                 -s)
                         operators="$operators $1"
+                        if integer_validator $2;
+                        then 
+                                width=$2
+                                shift
+                        else
+                                width=0
+                        fi
                         shift
                         ;;
 
@@ -166,4 +188,4 @@ while [ "$#" -gt 0 ]; do
 
 done
 
-echo $operators $command $files
+echo $operators $command $files $width
