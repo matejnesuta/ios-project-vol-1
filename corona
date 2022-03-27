@@ -7,6 +7,8 @@ operators=""
 command=""
 numberOfCommands=0
 files=""
+dateAfter=""
+dateBefore=""
 
 print_help() {
     echo -e "\e[1mNAME\e[0m"
@@ -92,7 +94,14 @@ valid_gender(){
         else
                 error "Špatně zadané pohlaví." 22
         fi
-        
+}
+
+date_validator(){
+        if [ -z "$(date -d "$1" 2>/dev/null)" ] ; then
+                error "Zadáno nevalidní datum." 22
+        else
+                return 0
+        fi
 }
 
 while [ "$#" -gt 0 ]; do
@@ -113,10 +122,16 @@ while [ "$#" -gt 0 ]; do
                         ;;
                 -a)
                         operators="$operators $1"
+                        date_validator "$2"                  
+                        dateAfter=$2
+                        shift
                         shift
                         ;;
                 -b)
                         operators="$operators $1"
+                        date_validator "$2"                  
+                        dateBefore=$2
+                        shift
                         shift
                         ;;
                 -g)
