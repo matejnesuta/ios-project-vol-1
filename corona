@@ -188,4 +188,21 @@ while [ "$#" -gt 0 ]; do
 
 done
 
-echo $operators $command $files $width
+for file in $files
+do
+        if [ -f "$file" ]; then
+                case $file in 
+                *.gz)  
+                        gzip -cd "$file"
+                        ;;     
+                *.bz2)  
+                        bzip2 -cd "$file"
+                        ;;
+                *)
+                        cat "$file"
+                        ;;      
+                esac
+        else 
+                error "Neznamy nazev souboru" 22
+        fi
+done
