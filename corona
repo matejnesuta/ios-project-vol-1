@@ -119,6 +119,22 @@ integer_validator(){
         return 0
 }
 
+controller(){
+        operation=""
+        case "$command" in
+        infected)
+                operation="tail -n +2 | wc -l"        
+                eval "$1 | $operation"
+                ;;
+        gender)
+                tmp=$(eval "$1")
+                echo -n "M: " ;echo "$tmp" | tail -n +2| awk -F, '$4=="M"' | wc -l
+                echo -n "Z: " ;echo "$tmp" | tail -n +2| awk -F, '$4=="Z"' | wc -l
+                ;;
+        esac
+        
+}
+
 while [ "$#" -gt 0 ]; do
         if [[ "$operators" == *"$1"* ]]; then
                 error "Nalezen duplicitní operátor." 22
@@ -188,21 +204,30 @@ while [ "$#" -gt 0 ]; do
 
 done
 
-for file in $files
-do
-        if [ -f "$file" ]; then
-                case $file in 
-                *.gz)  
-                        gzip -cd "$file"
-                        ;;     
-                *.bz2)  
-                        bzip2 -cd "$file"
-                        ;;
-                *)
-                        cat "$file"
-                        ;;      
-                esac
-        else 
-                error "Neznamy nazev souboru" 22
-        fi
-done
+source=""
+
+if [ "$files" == "" ]
+then
+        source="cat"
+        controller "$source"
+else
+        for file in $files
+        do
+                if [ -f "$file" ]; then
+                        case $file in 
+                        *.gz)  
+                                source="gzip -cd $file"
+                                ;;     
+                        *.bz2)  
+                                source="bzip2 -cd $file"
+                                ;;
+                        *)
+                                source="cat $file"
+                                ;;      
+                        esac
+                        controller "$source"
+                else 
+                        error "Neznamy nazev souboru" 22
+                fi
+        done
+fi 
