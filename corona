@@ -97,17 +97,38 @@ valid_gender(){
         fi
 }
 
-
-# ^(((0[1-9]|[12]\d|3[01])\/(0[13578]|1[02])\/((19|[2-9]\d)\d{2}))|((0[1-9]|[12]\d|30)\/(0[13456789]|1[012])\/((19|[2-9]\d)\d{2}))|((0[1-9]|1\d|2[0-8])\/02\/((19|[2-9]\d)\d{2}))|(29\/02\/((1[6-9]|[2-9]\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))))|^(0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])[- /.](19|20)\d\d+$
-# Matches: this expression validates a date field in dd/mm/yyyy  and mm/dd/yyyy format
-
-
 date_validator(){
-        if [ -z "$(date -d "$1" 2>/dev/null)" ] ; then
+        local date=(${1//-/ })
+
+        regex="^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+        if ! [[ $1 =~ $regex ]]
+        then
                 error "Zadáno nevalidní datum." 22
-        else
-                return 0
         fi
+
+
+	if [[ ${date[2]} -ge 32 ]]
+	then
+                error "Zadáno nevalidní datum." 22
+	elif [[ ${date[1]} -ge 13 ]]
+	then
+                error "Zadáno nevalidní datum." 22
+	elif [[ ${date[2]} == 31 ]] && [[ ${date[1]} == 04 || ${date[1]} == 06 || ${date[1]} == 09 || ${date[1]} == 11 ]]
+	then
+                error "Zadáno nevalidní datum." 22
+	elif [[ ${date[2]} -ge 30 && ${date[1]} == 02 ]]
+	then
+                error "Zadáno nevalidní datum." 22
+	elif [[ ${date[1]} == 02 && ${date[2]} == 29 ]]
+	then
+		if ! [[ ( $(expr ${date[0]} % 4) == 0 ) && ( $(expr ${date[0]} % 100) != 0 || $(expr ${date[0]} % 400) == 0 ) ]]
+		then
+                        error "Zadáno nevalidní datum." 22
+		fi
+	else
+		return 0
+	fi
 }
 
 integer_validator(){
@@ -127,9 +148,7 @@ controller(){
                 eval "$1 | $operation"
                 ;;
         gender)
-                tmp=$(eval "$1")
-                echo -n "M: " ;echo "$tmp" | tail -n +2| awk -F, '$4=="M"' | wc -l
-                echo -n "Z: " ;echo "$tmp" | tail -n +2| awk -F, '$4=="Z"' | wc -l
+                eval "$1" | awk -F, '{A[$4]+=1} END{print "M: " A["M"]"\nZ: " A["Z"]}'
                 ;;
         esac
         
