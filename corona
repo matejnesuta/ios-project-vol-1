@@ -10,6 +10,7 @@ files=""
 dateAfter=""
 dateBefore=""
 width=1
+header="id,datum,vek,pohlavi,kraj_nuts_kod,okres_lau_kod,nakaza_v_zahranici,nakaza_zeme_csu_kod,reportovano_khs\n"
 
 print_help() {
     echo -e "\e[1mNAME\e[0m"
@@ -141,8 +142,20 @@ integer_validator(){
 }
 
 controller(){
-        valiDate="cat - | awk -F, '{
-                if (\$2 ~ /^$/) {
+        valiAge=" | awk -F, '{
+                if (\$3 ~ /^[[:blank:]]*$/) {
+                        print \$0 
+                } else{
+                        if (\$3 ~ /^[0-9]*[0-9]+$|^[1-9]+[0-9]*$/){
+                                print \$0
+                        }else{
+                        print \"Invalid age: \"\$0 | \"cat 1>&2\";
+                        }
+                }           
+        }'"
+
+        valiDate="awk -F, '{
+                if (\$2 ~ /^[[:blank:]]*$/) {
                         print \$0 
                 } else{
                         if (\$2 ~ /([0-9]{4}-[0-9]{2}-[0-9]{2})/){
@@ -167,15 +180,84 @@ controller(){
                 }    
                         
                 }'"
-        operation=""
+
+        genderFilter=""
+        if [ "$gender" != "" ]
+        then
+                genderFilter="|awk -F, -vg=$gender 'BEGIN{OFS=\",\";} {\$4=g; print \$0}'"
+        fi
+
+        dateAfterFilter=""
+        if [ "$dateAfter" != "" ]
+        then
+                dateAfterFilter="|awk -F, -vdate=$dateAfter 'BEGIN{OFS=\",\";} {
+                        y=substr(\$2,1,4)+0;
+                        m=substr(\$2,6,2)+0;
+                        d=substr(\$2,9,2)+0;
+                        if(y>substr(date,1,4)+0){
+                                print \$0;
+                        }else if (y==substr(date,1,4)+0 && m>substr(date,6,2)+0){
+                                print \$0;
+                        }else if (y==substr(date,1,4)+0 && m==substr(date,6,2)+0 && d>=substr(date,9,2)+0){
+                                print \$0;
+                        }}'"
+        fi
+
+        dateBeforeFilter=""
+        if [ "$dateBefore" != "" ]
+        then
+                dateBeforeFilter="|awk -F, -vdate=$dateBefore 'BEGIN{OFS=\",\";} {
+                        y=substr(\$2,1,4)+0;
+                        m=substr(\$2,6,2)+0;
+                        d=substr(\$2,9,2)+0;
+                        if(y<substr(date,1,4)+0){
+                                print \$0;
+                        }else if (y==substr(date,1,4)+0 && m<substr(date,6,2)+0){
+                                print \$0;
+                        }else if (y==substr(date,1,4)+0 && m==substr(date,6,2)+0 && d<=substr(date,9,2)+0){
+                                print \$0;
+                        }}'"
+        fi
+
+        filters="$genderFilter $dateAfterFilter $dateBeforeFilter"
         case "$command" in
         infected)
-                operation="tail -n +2 | wc -l"        
-                eval "$1 | $operation"
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |wc -l
                 ;;
         gender)
-                eval "$1" | tail -n +2 | eval "$valiDate" | awk -F, '{A[$4]+=1} END{print "M: " A["M"]"\nZ: " A["Z"]}'
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" | awk -F, 'BEGIN{
+                        A["M"]=0;
+                        A["Z"]=0;
+                }{A[$4]+=1} END{
+                        print "M: " A["M"];
+                        print "Z: " A["Z"];         
+                        if (A[""])
+                                print "None: " A[""];
+                        }'
                 ;;
+        daily)
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
+                        if ($2 ~ /^[[:blank:]]*$/) 
+                                d[""]++;
+                        else
+                                d[$2]++} 
+                        END {
+                                for (i in d){
+                                        if (i!="")
+                                                print i": "d[i]
+                                }
+                                if (d[""]>0)
+                                print "None: " d[""]
+                        }'| sort  
+                ;;
+        *)
+                echo "id,datum,vek,pohlavi,kraj_nuts_kod,okres_lau_kod,nakaza_v_zahranici,nakaza_zeme_csu_kod,reportovano_khs"
+                if [ "$dateBeforeFilter" == "" ] || [ "$dateAfterFilter" == "" ]
+                then
+                        eval "$1 | tail -n +2 $filters"
+                else
+                        eval "$1 $valiDate $filters"
+                fi
         esac
         
 }
@@ -253,7 +335,7 @@ source=""
 
 if [ "$files" == "" ]
 then
-        source="cat"
+        source="cat | tr -d \"\r\""
         controller "$source"
 
 else
@@ -271,13 +353,13 @@ else
                         fi
                         case $file in 
                         *.gz)  
-                                source="$source gzip -cd $file"
+                                source="$source gzip -cd $file | tr -d \"\r\""
                                 ;;     
                         *.bz2)  
-                                source="$source bzip2 -cd $file"
+                                source="$source bzip2 -cd $file | tr -d \"\r\""
                                 ;;
                         *)
-                                source="$source cat $file"
+                                source="$source cat $file | tr -d \"\r\""
                                 ;;      
                         esac
                         ((increment=increment+1))
