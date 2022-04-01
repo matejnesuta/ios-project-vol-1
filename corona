@@ -1,6 +1,6 @@
 #!/bin/bash
 
-POSIXLY_CORRECT=yes
+export POSIXLY_CORRECT=yes
 
 gender=""
 operators=""
@@ -9,7 +9,7 @@ numberOfCommands=0
 files=""
 dateAfter=""
 dateBefore=""
-width=1
+width=-1
 header="id,datum,vek,pohlavi,kraj_nuts_kod,okres_lau_kod,nakaza_v_zahranici,nakaza_zeme_csu_kod,reportovano_khs\n"
 
 print_help() {
@@ -225,32 +225,104 @@ controller(){
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |wc -l
                 ;;
         gender)
-                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" | awk -F, 'BEGIN{
-                        A["M"]=0;
-                        A["Z"]=0;
-                }{A[$4]+=1} END{
-                        print "M: " A["M"];
-                        print "Z: " A["Z"];         
-                        if (A[""])
-                                print "None: " A[""];
-                        }'
-                ;;
-        daily)
-                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
-                        if ($2 ~ /^[[:blank:]]*$/) 
-                                d[""]++;
-                        else
-                                d[$2]++} 
-                        END {
-                                for (i in d){
-                                        if (i!="")
-                                                print i": "d[i]
+                if [ $width -eq -1 ]
+                then
+                        eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" | awk -F, 'BEGIN{
+                                A["M"]=0;
+                                A["Z"]=0;
+                        }{A[$4]+=1} END{
+                                print "M: " A["M"];
+                                print "Z: " A["Z"];         
+                                if (A[""])
+                                        print "None: " A[""];
+                                }'
+                else
+                        eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" | awk -F, -vwidth=$width 'BEGIN{
+                                A["M"]=0;
+                                A["Z"]=0;
+                                }{A[$4]+=1} END{
+                                
+                                if (width==0){
+                                        width=100000
+                                        formula=1/width
                                 }
-                                if (d[""]>0)
-                                print "None: " d[""]
-                        }'| sort  
+                                else{
+                                        max=1;
+                                        for(i in A){
+                                                if (A[i]>max)
+                                                        max=A[i]
+                                        }
+                                        formula=width/max
+                                }
+                                hashtags=sprintf("%"int(A["M"]*formula)"s", "");
+                                gsub(" ", "#", hashtags);
+                                print "M:    "hashtags
+
+                                hashtags=sprintf("%"int(A["Z"]*formula)"s", "");
+                                gsub(" ", "#", hashtags);
+                                print "Z:    "hashtags
+                                if (A[""]){
+                                        hashtags=sprintf("%"int(A[""]*formula)"s", "");
+                                        gsub(" ", "#", hashtags);
+                                        print "None: " hashtags;
+                                }
+                                }'
+                fi
+                ;;
+                # (hodnota / max) * width
+        daily)
+                if [ $width -eq -1 ]
+                then
+                        eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
+                                        if ($2 ~ /^[[:blank:]]*$/) 
+                                        d[""]++;
+                                else
+                                        d[$2]++} 
+                                END {
+                                        for (i in d){
+                                                if (i!="")
+                                                        print i": "d[i]
+                                        }
+                                        if (d[""]>0)
+                                        print "None: " d[""]
+                                }'| sort  
+                else
+                        eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth=$width '{
+                                        if ($2 ~ /^[[:blank:]]*$/) 
+                                                d[""]++;
+                                        else
+                                                d[$2]++} 
+                                END {
+                                        if (width==0){
+                                                width=500
+                                                formula=1/width
+                                        }
+                                        else{
+                                                max=1;
+                                                for(i in d){
+                                                        if (d[i]>max)
+                                                                max=d[i]
+                                                        }
+                                                formula=width/max
+                                        }
+                                        for (i in d){
+                                                if(i!=""){
+                                                        hashtags=sprintf("%"int(d[i]*formula)"s", "");
+                                                        gsub(" ", "#", hashtags);
+                                                        print i": "hashtags
+                                                }
+                                        }
+                                        if (d[""]){
+                                                hashtags=sprintf("%"int(d[""]*formula)"s", "");
+                                                gsub(" ", "#", hashtags);
+                                                print "None:       " hashtags;
+                                        }
+                                }'| sort
+                fi
                 ;;
         monthly)
+                if [ $width -eq -1 ]
+                then
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
                         
                         if ($2 ~ /^[[:blank:]]*$/) 
@@ -268,8 +340,47 @@ controller(){
                                 if (arr[""]>0)
                                 print "None: " arr[""]
                         }'| sort  
+                else
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth=$width '{
+                        
+                        if ($2 ~ /^[[:blank:]]*$/) 
+                                arr[""]++;
+                        else{
+                                m=substr($2,1,7)
+                                arr[m]++
+                        } 
+                        }
+                        END {
+                        if (width==0){
+                                width=10000
+                                        formula=1/width
+                                }
+                                else{
+                                        max=1;
+                                        for(i in arr){
+                                                if (arr[i]>max)
+                                                        max=arr[i]
+                                                }
+                                        formula=width/max
+                                }
+                                for (i in arr){
+                                        if(i!=""){
+                                                hashtags=sprintf("%"int(arr[i]*formula)"s", "");
+                                                gsub(" ", "#", hashtags);
+                                                print i": "hashtags
+                                        }
+                                }
+                                if (arr[""]){
+                                        hashtags=sprintf("%"int(arr[""]*formula)"s", "");
+                                        gsub(" ", "#", hashtags);
+                                        print "None:    " hashtags;
+                                }
+                        }'| sort
+                fi
                 ;;
         yearly)
+                if [ $width -eq -1 ]
+                then
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
                         if ($2 ~ /^[[:blank:]]*$/) 
                                 arr[""]++;
@@ -286,8 +397,47 @@ controller(){
                                 if (arr[""]>0)
                                 print "None: " arr[""]
                         }'| sort  
+                else
+                        eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth="$width" '{
+                        if ($2 ~ /^[[:blank:]]*$/) 
+                                arr[""]++;
+                        else{
+                                y=substr($2,1,4)
+                                arr[y]++
+                        } 
+                        }
+                        END {
+                                if (width==0){
+                                        width=100000
+                                        formula=1/width
+                                }
+                                else{
+                                        max=1;
+                                        for(i in arr){
+                                                if (arr[i]>max)
+                                                        max=arr[i]
+                                                }
+                                        formula=width/max
+                                }
+                                for (i in arr){
+                                        if(i!=""){
+                                                hashtags=sprintf("%"int(arr[i]*formula)"s", "");
+                                                gsub(" ", "#", hashtags);
+                                                print i":    "hashtags
+                                        }
+                                }
+                                if (arr[""]){
+                                        hashtags=sprintf("%"int(arr[""]*formula)"s", "");
+                                        gsub(" ", "#", hashtags);
+                                        print "None: " hashtags;
+                                }
+
+                        }'| sort
+                fi
                 ;;
         countries)
+                if [ $width -eq -1 ]
+                then
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
                         if ($8 !~ /^[[:blank:]]*$/ && $8!="CZ") 
                                 arr[$8]++} 
@@ -296,8 +446,41 @@ controller(){
                                         print i": "arr[i]
                                 }
                         }'| sort  
+                else
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth=$width '{
+                        if ($8 !~ /^[[:blank:]]*$/ && $8!="CZ") 
+                                arr[$8]++} 
+                        END {
+                                if (width==0){
+                                        width=100
+                                        formula=1/width
+                                }
+                                else{
+                                        max=1;
+                                        for(i in arr){
+                                                if (arr[i]>max)
+                                                        max=arr[i]
+                                                }
+                                        formula=width/max
+                                }
+                                for (i in arr){
+                                        if(i!=""){
+                                                hashtags=sprintf("%"int(arr[i]*formula)"s", "");
+                                                gsub(" ", "#", hashtags);
+                                                print i": "hashtags
+                                        }
+                                }
+                                if (arr[""]){
+                                        hashtags=sprintf("%"int(arr[""]*formula)"s", "");
+                                        gsub(" ", "#", hashtags);
+                                        print "None: " hashtags;
+                                }
+                        }'| sort       
+                fi
                 ;;
         districts)
+                if [ $width -eq -1 ]
+                then
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
                         if ($6 ~ /^[[:blank:]]*$/) 
                                 arr[""]++;
@@ -311,8 +494,43 @@ controller(){
                                 if (arr[""]>0)
                                 print "None: " arr[""]
                         }'| sort  
+                else
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth=$width '{
+                        if ($6 ~ /^[[:blank:]]*$/) 
+                                arr[""]++;
+                        else
+                                arr[$6]++} 
+                        END {
+                                if (width==0){
+                                        width=1000
+                                        formula=1/width
+                                }
+                                else{
+                                        max=1;
+                                        for(i in arr){
+                                                if (arr[i]>max)
+                                                        max=arr[i]
+                                                }
+                                        formula=width/max
+                                }
+                                for (i in arr){
+                                        if(i!=""){
+                                                hashtags=sprintf("%"int(arr[i]*formula)"s", "");
+                                                gsub(" ", "#", hashtags);
+                                                print i": "hashtags
+                                        }
+                                }
+                                if (arr[""]){
+                                        hashtags=sprintf("%"int(arr[""]*formula)"s", "");
+                                        gsub(" ", "#", hashtags);
+                                        print "None:   " hashtags;
+                                }
+                        }'| sort
+                fi
                 ;;
         regions)
+                if [ $width -eq -1 ]
+                then
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
                         if ($5 ~ /^[[:blank:]]*$/) 
                                 arr[""]++;
@@ -325,9 +543,44 @@ controller(){
                                 }
                                 if (arr[""]>0)
                                 print "None: " arr[""]
-                        }'| sort  
+                        }'| sort 
+                else
+                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth=$width '{
+                        if ($5 ~ /^[[:blank:]]*$/) 
+                                arr[""]++;
+                        else
+                                arr[$5]++} 
+                        END {
+                                if (width==0){
+                                        width=10000
+                                        formula=1/width
+                                }
+                                else{
+                                        max=1;
+                                        for(i in arr){
+                                                if (arr[i]>max)
+                                                        max=arr[i]
+                                                }
+                                        formula=width/max
+                                }
+                                for (i in arr){
+                                        if(i!=""){
+                                                hashtags=sprintf("%"int(arr[i]*formula)"s", "");
+                                                gsub(" ", "#", hashtags);
+                                                print i": "hashtags
+                                        }
+                                }
+                                if (arr[""]){
+                                        hashtags=sprintf("%"int(arr[""]*formula)"s", "");
+                                        gsub(" ", "#", hashtags);
+                                        print "None:  " hashtags;
+                                }
+                        }'| sort
+                fi
                 ;;
-        age)
+        age)    #vim magic
+                if [ $width -eq -1 ]
+                then 
                 eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, '{
                         if ($3 ~ /^[[:blank:]]*$/) 
                                 arr[""]++;
@@ -360,21 +613,82 @@ controller(){
                         } 
                         }
                         END {
-                                print "0-5   : " arr["1"]
-                                print "6-5   : " arr["2"]
-                                print "16-25 : " arr["3"]
-                                print "26-35 : " arr["4"]
-                                print "36-45 : " arr["5"]
-                                print "46-55 : " arr["6"]
-                                print "56-65 : " arr["7"]
-                                print "66-75 : " arr["8"]
-                                print "76-85 : " arr["9"]
-                                print "86-95 : " arr["10"]
-                                print "96-105: " arr["11"]
-                                print ">105  : " arr["12"]
+                                print "0-5   : " arr["1"]+0
+                                print "6-15  : " arr["2"]+0
+                                print "16-25 : " arr["3"]+0
+                                print "26-35 : " arr["4"]+0
+                                print "36-45 : " arr["5"]+0
+                                print "46-55 : " arr["6"]+0
+                                print "56-65 : " arr["7"]+0
+                                print "66-75 : " arr["8"]+0
+                                print "76-85 : " arr["9"]+0
+                                print "86-95 : " arr["10"]+0
+                                print "96-105: " arr["11"]+0
+                                print ">105  : " arr["12"]+0
                                 if (arr[""]>0)
                                         print "None  : " arr[""]
                         }' 
+                        else
+                                eval "$1" | tail -n +2 | eval "$valiDate $valiAge $filters" |awk -F, -vwidth=$width '{
+                        if ($3 ~ /^[[:blank:]]*$/) 
+                                arr[""]++;
+                        else{
+                                age = $3+0;
+                                if (age>=0 && age<=5)
+                                        arr["1"]++
+                                else if (age>=6 && age<=15)
+                                        arr["2"]++
+                                else if (age>=16 && age<=25)
+                                        arr["3"]++
+                                else if (age>=26 && age<=35)
+                                        arr["4"]++
+                                else if (age>=36 && age<=45)
+                                        arr["5"]++
+                                else if (age>=46 && age<=55)
+                                        arr["6"]++
+                                else if (age>=56 && age<=65)
+                                        arr["7"]++
+                                else if (age>=66 && age<=75)
+                                        arr["8"]++
+                                else if (age>=76 && age<=85)
+                                        arr["9"]++
+                                else if (age>=86 && age<=95)
+                                        arr["10"]++
+                                else if (age>=96 && age<=105)
+                                        arr["11"]++
+                                else if (age>=106)
+                                        arr["12"]++
+                        } 
+                        }
+                        END {
+                                if (width==0){
+                                        width=10000
+                                        formula=1/width
+                                }
+                                else{
+                                        max=1;
+                                        for(i in arr){
+                                                if (arr[i]>max)
+                                                        max=arr[i]
+                                                }
+                                        formula=width/max
+                                }
+                                        hashtags=sprintf("%"int(arr["1"]*formula)"s", "");gsub(" ", "#", hashtags);print "0-5   : " hashtags
+                                        hashtags=sprintf("%"int(arr["2"]*formula)"s", "");gsub(" ", "#", hashtags);print "6-15  : " hashtags
+                                        hashtags=sprintf("%"int(arr["3"]*formula)"s", "");gsub(" ", "#", hashtags);print "16-25 : " hashtags
+                                        hashtags=sprintf("%"int(arr["4"]*formula)"s", "");gsub(" ", "#", hashtags);print "26-35 : " hashtags
+                                        hashtags=sprintf("%"int(arr["5"]*formula)"s", "");gsub(" ", "#", hashtags);print "36-45 : " hashtags
+                                        hashtags=sprintf("%"int(arr["6"]*formula)"s", "");gsub(" ", "#", hashtags);print "46-55 : " hashtags
+                                        hashtags=sprintf("%"int(arr["7"]*formula)"s", "");gsub(" ", "#", hashtags);print "56-65 : " hashtags
+                                        hashtags=sprintf("%"int(arr["8"]*formula)"s", "");gsub(" ", "#", hashtags);print "66-75 : " hashtags
+                                        hashtags=sprintf("%"int(arr["9"]*formula)"s", "");gsub(" ", "#", hashtags);print "76-85 : " hashtags
+                                        hashtags=sprintf("%"int(arr["10"]*formula)"s", "");gsub(" ", "#", hashtags);print "86-95 : " hashtags
+                                        hashtags=sprintf("%"int(arr["11"]*formula)"s", "");gsub(" ", "#", hashtags);print "96-105: " hashtags
+                                        hashtags=sprintf("%"int(arr["11"]*formula)"s", "");gsub(" ", "#", hashtags);print ">105  : " hashtags
+                                if (arr[""]>0)
+                                     hashtags=sprintf("%"int(arr[""]*formula)"s", "");gsub(" ", "#", hashtags);   print "None  : " hashtags
+                        }'
+                        fi
                 ;;
         *)
                 echo "id,datum,vek,pohlavi,kraj_nuts_kod,okres_lau_kod,nakaza_v_zahranici,nakaza_zeme_csu_kod,reportovano_khs"
